@@ -22,9 +22,47 @@ namespace LansSharedMap
 		}
 	}
 
+	public class PostUpdate : ModSystem
+    {
+		public override void PostUpdateEverything()
+		{
+			base.PostUpdateEverything();
+
+
+			
+			while (LansSharedMap.updates.Count > 0)
+			{
+				var maxUpdates = Math.Min(1000, LansSharedMap.updates.Count);
+				int length = 2 + 4 + maxUpdates * 12;
+				var packet = Mod.GetPacket(length);
+				packet.Write((byte)LansSharedMap.LansSharedMapModMessageType.MapUpdate);
+				packet.Write((byte)Main.myPlayer);
+				packet.Write((int)length);
+
+				for (var i = 0; i < maxUpdates; i++)
+				{
+					var t = LansSharedMap.updates.Dequeue();
+					packet.Write((int)t.x);
+					packet.Write((int)t.y);
+					var mapTile = Main.Map[t.x, t.y];
+					packet.Write((ushort)mapTile.Type);
+					packet.Write((byte)mapTile.Light);
+					packet.Write((byte)mapTile.Color);
+						
+				}
+
+				packet.Send();
+
+				//this.Logger.Warn("Sent " + maxUpdates + " stuff");
+					
+			}
+				
+		}
+    }
+
 	public class LansSharedMap : Mod
 	{
-		Queue<Position> updates = new Queue<Position>();
+		public static Queue<Position> updates = new Queue<Position>();
 
 		//ushort[][] sentMapType;
 		//byte[][] sentMapLight;
@@ -81,39 +119,10 @@ namespace LansSharedMap
 			}
 		}
 		
-		public override void PostUpdateEverything()
+		public void PostUpdateEverything()
 		{
-			base.PostUpdateEverything();
-
-
-			
-			while (updates.Count > 0)
-			{
-				var maxUpdates = Math.Min(1000, updates.Count);
-				int length = 2 + 4 + maxUpdates * 12;
-				var packet = GetPacket(length);
-				packet.Write((byte)LansSharedMapModMessageType.MapUpdate);
-				packet.Write((byte)Main.myPlayer);
-				packet.Write((int)length);
-
-				for (var i = 0; i < maxUpdates; i++)
-				{
-					var t = updates.Dequeue();
-					packet.Write((int)t.x);
-					packet.Write((int)t.y);
-					var mapTile = Main.Map[t.x, t.y];
-					packet.Write((ushort)mapTile.Type);
-					packet.Write((byte)mapTile.Light);
-					packet.Write((byte)mapTile.Color);
-						
-				}
-
-				packet.Send();
-
-				//this.Logger.Warn("Sent " + maxUpdates + " stuff");
-					
-			}
-				
+			var postUpdate = new PostUpdate();
+			postUpdate.PostUpdateEverything();
 		}
 
 
